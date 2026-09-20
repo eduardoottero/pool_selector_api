@@ -4,9 +4,9 @@ Um Protocol (interface estrutural do Python) define o contrato, com duas
 implementações: leitura do disco local (padrão, usada pelo `make dev`, sem
 nenhuma dependência de nuvem) e leitura via boto3 de um bucket S3 real ou do
 LocalStack. As duas implementações usam exatamente o mesmo código de
-parsing — só muda de onde os bytes vêm. Isso é o que permite dizer, numa
-entrevista, que o caminho do S3 é código real e testado (com moto, na
-Etapa 5), não apenas uma promessa de design.
+parsing — só muda de onde os bytes vêm. O caminho do S3 é código real,
+testado com moto (ver tests/test_s3_source.py), não apenas uma promessa
+de design.
 """
 
 from __future__ import annotations
