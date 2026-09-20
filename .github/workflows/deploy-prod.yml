@@ -1,0 +1,43 @@
+# Deploy em produção — dispara ao mergear a PR dev -> main aberta
+# automaticamente pelo deploy-dev.yml. Mesmo desenho do dry-run: honesto
+# sobre o que faria, guardado pela mesma flag, sem conta AWS ligada.
+
+name: Deploy (prod)
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Environment "prod" com required reviewer — segundo gate manual,
+    # independente do de dev, exigido pelo fluxo descrito no planejamento
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy no ECS (prod)
+        env:
+          AWS_ENABLED: ${{ vars.AWS_ENABLED }}
+          ECR_REPO: ${{ vars.ECR_REPO }}
+          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+          ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+        run: |
+          if [ "$AWS_ENABLED" != "true" ]; then
+            echo "AWS_ENABLED não está 'true' — modo dry-run."
+            echo "Comandos que seriam executados:"
+            echo "  aws ecr get-login-password | docker login --username AWS --password-stdin \$ECR_REPO"
+            echo "  docker build -t \$ECR_REPO:${GITHUB_SHA} ."
+            echo "  docker push \$ECR_REPO:${GITHUB_SHA}"
+            echo "  aws ecs update-service --cluster \$ECS_CLUSTER --service \$ECS_SERVICE --force-new-deployment"
+            exit 0
+          fi
+
+          aws ecr get-login-password | docker login --username AWS --password-stdin "$ECR_REPO"
+          docker build -t "$ECR_REPO:${GITHUB_SHA}" .
+          docker push "$ECR_REPO:${GITHUB_SHA}"
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment

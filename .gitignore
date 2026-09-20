@@ -216,3 +216,17 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Dataset sintético gerado localmente (make dev recria a partir do seed).
+# A saída é particionada em subpastas por data (data/events/<AAAA-MM-DD>/<HH>.jsonl),
+# por isso o padrão precisa de ** para cobrir qualquer profundidade.
+data/events/**/*.jsonl
+!data/events/.gitkeep
+
+# Terraform — .terraform/ é a pasta de cache local (providers baixados);
+# .terraform.lock.hcl é versionado de propósito (trava as versões de
+# provider entre execuções, inclusive no CI).
+**/.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info

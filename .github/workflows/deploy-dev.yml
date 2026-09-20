@@ -1,0 +1,78 @@
+# Deploy no ambiente dev — dispara a cada push na branch `dev` (ou seja,
+# a cada PR de uma feature branch mergeada nela). Usa o GitHub Environment
+# "dev" com aprovação manual obrigatória, que é como o requisito "step de
+# aprovação para mim mesmo idle" é implementado nativamente, sem precisar
+# de um job de "wait for approval" caseiro.
+#
+# O job de deploy é um DRY-RUN honesto: sem conta AWS provisionada para
+# este desafio, os comandos reais são impressos, nunca executados. Está
+# guardado por `vars.AWS_ENABLED`, então ligar isso é uma mudança de
+# configuração do repositório, não uma mudança de código — o workflow já
+# é, literalmente, o de produção.
+
+name: Deploy (dev)
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # o Environment "dev" no GitHub deve ter um "required reviewer"
+    # configurado (Settings > Environments) — é isso que pausa o job aqui
+    # até alguém aprovar manualmente
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy no ECS (dev)
+        env:
+          AWS_ENABLED: ${{ vars.AWS_ENABLED }}
+          ECR_REPO: ${{ vars.ECR_REPO }}
+          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+          ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+        run: |
+          if [ "$AWS_ENABLED" != "true" ]; then
+            echo "AWS_ENABLED não está 'true' — modo dry-run."
+            echo "Comandos que seriam executados:"
+            echo "  aws ecr get-login-password | docker login --username AWS --password-stdin \$ECR_REPO"
+            echo "  docker build -t \$ECR_REPO:${GITHUB_SHA} ."
+            echo "  docker push \$ECR_REPO:${GITHUB_SHA}"
+            echo "  aws ecs update-service --cluster \$ECS_CLUSTER --service \$ECS_SERVICE --force-new-deployment"
+            echo ""
+            echo "Gatilho: vars.AWS_ENABLED == 'true' no repositório."
+            echo "Credenciais: OIDC (aws-actions/configure-aws-credentials com role-to-assume),"
+            echo "nunca chaves de longa duração."
+            exit 0
+          fi
+
+          # --- caminho real, inerte até vars.AWS_ENABLED='true' ---
+          aws ecr get-login-password | docker login --username AWS --password-stdin "$ECR_REPO"
+          docker build -t "$ECR_REPO:${GITHUB_SHA}" .
+          docker push "$ECR_REPO:${GITHUB_SHA}"
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment
+
+  open-prod-pr:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Abre PR dev -> main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # --head/--base: promove o que acabou de ser aprovado em dev
+          # para main, disparando o pipeline de prod ao ser mergeado
+          gh pr create \
+            --base main \
+            --head dev \
+            --title "Promove dev -> main ($(date +%Y-%m-%d))" \
+            --body "Aberta automaticamente após o deploy aprovado em dev (commit ${GITHUB_SHA})." \
+            || echo "PR já existe ou não há mudanças a promover — seguindo sem falhar o job"

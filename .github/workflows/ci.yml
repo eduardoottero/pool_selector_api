@@ -1,0 +1,97 @@
+# CI — roda de verdade em todo push e PR para dev/main. Não é dry-run:
+# lint, type-check, testes e o build da imagem Docker executam e gatekeepam
+# o merge. É o que sustenta a afirmação de "estratégia de CI/CD" do desafio
+# sem depender de nenhuma conta AWS.
+
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instala Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instala Poetry
+        run: pipx install poetry==2.2.1
+
+      - name: Cacheia dependências do Poetry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: poetry-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+
+      - name: Instala dependências
+        run: poetry install
+
+      - name: Lint (ruff)
+        run: |
+          poetry run ruff check app tests
+          poetry run ruff format --check app tests
+
+      - name: Type-check (mypy)
+        run: poetry run mypy app
+
+      - name: Testes com cobertura
+        run: poetry run pytest --cov=app --cov-report=term-missing --cov-report=xml
+
+      - name: Publica relatório de cobertura
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build da imagem (valida o Dockerfile, não publica)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: pool-selector-api:ci
+
+  terraform-validate:
+    runs-on: ubuntu-latest
+    # Só fmt/validate — nenhum dos dois precisa de credencial AWS nem de
+    # infraestrutura provisionada. É o que permite validar o Terraform no
+    # CI mesmo sem conta na AWS (ver infra/terraform/README.md).
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: terraform fmt (todos os módulos e ambientes)
+        run: terraform fmt -check -recursive infra/terraform
+
+      - name: terraform validate (módulo)
+        working-directory: infra/terraform/modules/api
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - name: terraform validate (env dev)
+        working-directory: infra/terraform/envs/dev
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - name: terraform validate (env prod)
+        working-directory: infra/terraform/envs/prod
+        run: |
+          terraform init -backend=false
+          terraform validate

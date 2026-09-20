@@ -1,0 +1,55 @@
+# Caminho alternativo de desenvolvimento — demonstra o adapter S3 contra
+# um S3 real (emulado). Não é o padrão (`make dev` cobre isso sem Docker,
+# ver Makefile); é ativado explicitamente com `make dev-aws`, usando o
+# profile "aws" para não subir nada disto sem essa flag.
+
+services:
+  localstack:
+    image: localstack/localstack:3
+    profiles: ["aws"]
+    ports:
+      - "4566:4566" # porta única que emula todos os serviços AWS habilitados
+    environment:
+      - SERVICES=s3
+      - DEFAULT_REGION=us-east-1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  seeder:
+    build: .
+    profiles: ["aws"]
+    depends_on:
+      localstack:
+        condition: service_healthy
+    environment:
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test # LocalStack não valida credenciais reais;
+      - AWS_SECRET_ACCESS_KEY=test # o boto3 exige que existam, então usamos valores fixos
+      - AWS_REGION=us-east-1
+      - S3_BUCKET=spark-job-events
+    volumes:
+      # a imagem não embute o dataset (excluído via .dockerignore, de
+      # propósito — não é artefato de produção); montamos a pasta local
+      # gerada pelo `make seed` e apontamos o seeder para ela via --source
+      - ./data/events:/data/events:ro
+    entrypoint: ["python", "-m", "app.tools.seed_s3", "--source", "/data/events"]
+
+  api:
+    build: .
+    profiles: ["aws"]
+    depends_on:
+      seeder:
+        condition: service_completed_successfully
+    ports:
+      - "5050:5050"
+    environment:
+      - EVENT_SOURCE=s3
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+      - S3_BUCKET=spark-job-events
+      - S3_PREFIX=events/
