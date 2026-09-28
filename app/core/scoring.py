@@ -55,7 +55,8 @@ def weight_by_age(age_hours: float) -> float:
     janela de lookback são descartados (peso 0).
     """
     if age_hours < 0:
-        # evento no "futuro" (relógio do produtor adiantado, por exemplo) — trata como o mais recente possível ao invés de rejeitar
+        # evento no "futuro" (relógio do produtor adiantado, por exemplo) —
+        # trata como o mais recente possível ao invés de rejeitar
         age_hours = 0.0
     if age_hours < settings.window_recent_h:
         return float(settings.weight_recent)
