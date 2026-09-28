@@ -1,13 +1,16 @@
 """
-Algoritmo de scoring: sistema de pontos que ranqueia pools de instâncias spot pela probabilidade de um job executar sem perder a instância.
+Algoritmo de scoring: sistema de pontos que ranqueia pools de instâncias
+spot pela probabilidade de um job executar sem perder a instância.
 
-Esse sistema de pontos aritmético é composto pelos seguinte passos:
-1 - peso por idade do evento (3/2/1, em degraus) - primeiramente, eventos mais recentes pesam mais, para que uma AZ que piorou recentemente tenha sua nota puxada para baixo;
-2 - classificação em bom/ruim/ignorado - os eventos de job são classificados em três categorias: bom (job terminou com sucesso), ruim (job falhou por perda da instância spot) e ignorado (job falhou por outro motivo, como timeout ou erro de execução do Spark);
-3 - agregação por pool - os eventos são agregados por pool, somando os pesos de cada categoria e contando o total de eventos considerados;
-4 - cálculo da nota e escolha do pool - sorteio ponderado entre os 3 melhores pools. O vencedor do sorteio é o pool recomendado pela API, os outros dois são alternativas.
-O algoritmo é determinístico para o mesmo conjunto de eventos, mas o sorteio ponderado evita que uma rajada de jobs mande todos para o
-mesmo pool e estoure a capacidade da AZ que os atraiu.
+O racional completo da escolha está em docs/adr/0003-algoritmo-scoring.md; 
+resumo: como o passo final sorteia entre os melhores candidatos, ganhar 
+resolução decimal na nota não muda o resultado, e um cálculo auditável de 
+cabeça é mais valioso operacionalmente do que alguns pontos percentuais 
+de precisão.
+
+Funções puras, sem I/O: recebem eventos e o instante de referência, devolvem
+dados. Isso é o que torna o algoritmo testável em isolamento (TDD) e reusável
+tanto para o loop de ingestão (Etapa 3) quanto para testes de regressão.
 """
 
 from __future__ import annotations
