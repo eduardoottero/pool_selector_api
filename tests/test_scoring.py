@@ -107,10 +107,7 @@ def test_pool_with_many_job_failures_keeps_high_score():
     job (TIMED_OUT/SPARK_EXECUTION_ERROR) ao lado de execuções saudáveis não
     pode ter a nota derrubada por isso — são falhas do job, não do pool."""
     events = [_event("pool-c6.xlarge-us-east-1b", Status.SUCCESS) for _ in range(20)]
-    events += [
-        _event("pool-c6.xlarge-us-east-1b", Status.FAILED, reason=Reason.TIMED_OUT)
-        for _ in range(80)
-    ]
+    events += [_event("pool-c6.xlarge-us-east-1b", Status.FAILED, reason=Reason.TIMED_OUT) for _ in range(80)]
 
     stats = compute_stats(events, now=NOW)
     pool = stats["pool-c6.xlarge-us-east-1b"]
@@ -124,13 +121,9 @@ def test_lucky_newcomer_loses_to_workhorse_with_large_sample():
     """O teste central do sistema de pontos: um pool com poucos eventos e
     100% de sucesso não deve vencer um pool com muitos eventos e boa
     (mas não perfeita) taxa de sucesso."""
-    newcomer = [
-        _event("pool-r6.2xlarge-us-east-1d", Status.SUCCESS, age_hours=0.2) for _ in range(2)
-    ]
+    newcomer = [_event("pool-r6.2xlarge-us-east-1d", Status.SUCCESS, age_hours=0.2) for _ in range(2)]
 
-    workhorse = [
-        _event("pool-r6.xlarge-us-east-1a", Status.SUCCESS, age_hours=1) for _ in range(485)
-    ]
+    workhorse = [_event("pool-r6.xlarge-us-east-1a", Status.SUCCESS, age_hours=1) for _ in range(485)]
     workhorse += [
         _event(
             "pool-r6.xlarge-us-east-1a",
@@ -146,9 +139,7 @@ def test_lucky_newcomer_loses_to_workhorse_with_large_sample():
     newcomer_score = stats["pool-r6.2xlarge-us-east-1d"].score
     workhorse_score = stats["pool-r6.xlarge-us-east-1a"].score
 
-    assert (
-        newcomer_score < workhorse_score
-    ), f"newcomer ({newcomer_score:.3f}) não deveria vencer o workhorse ({workhorse_score:.3f})"
+    assert newcomer_score < workhorse_score, f"newcomer ({newcomer_score:.3f}) não deveria vencer o workhorse ({workhorse_score:.3f})"
 
 
 def test_pool_with_no_events_has_neutral_cold_start_score():

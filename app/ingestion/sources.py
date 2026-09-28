@@ -1,10 +1,10 @@
 """
 Fonte de eventos: de onde a ingestão lê os arquivos JSONL.
 
-Um Protocol (interface estrutural do Python) define o contrato, com duas implementações: 
-leitura do disco local (padrão, usada pelo `make dev`, sem nenhuma dependência de nuvem) e 
-leitura via boto3 de um bucket S3 real ou do LocalStack. 
-As duas implementações usam exatamente o mesmo código de parsing, só muda de onde os bytes vêm. 
+Um Protocol (interface estrutural do Python) define o contrato, com duas implementações:
+leitura do disco local (padrão, usada pelo `make dev`, sem nenhuma dependência de nuvem) e
+leitura via boto3 de um bucket S3 real ou do LocalStack.
+As duas implementações usam exatamente o mesmo código de parsing, só muda de onde os bytes vêm.
 O caminho do S3 é código real, testado com moto (ver tests/test_s3_source.py).
 """
 
@@ -20,7 +20,7 @@ class ObjectRef:
     """
     Referência a um objeto de eventos (um arquivo local ou uma key do S3).
 
-    `version` é usado para leitura incremental: no adapter local é o mtime do arquivo; 
+    `version` é usado para leitura incremental: no adapter local é o mtime do arquivo;
     no S3 seria o ETag do objeto. Se a versão não mudou desde a última leitura, o refresher (Etapa 3) pode pular esse objeto.
     """
 
@@ -60,10 +60,7 @@ class LocalFileEventSource:
     def list_objects(self) -> list[ObjectRef]:
         if not self.base_dir.exists():
             return []
-        return [
-            ObjectRef(key=str(path), version=str(path.stat().st_mtime))
-            for path in sorted(self.base_dir.rglob("*.jsonl"))
-        ]
+        return [ObjectRef(key=str(path), version=str(path.stat().st_mtime)) for path in sorted(self.base_dir.rglob("*.jsonl"))]
 
     def read_lines(self, ref: ObjectRef) -> list[str]:
         path = Path(ref.key)
@@ -74,7 +71,7 @@ class S3EventSource:
     """
     Lê eventos de um bucket S3 via boto3 — funciona tanto contra a AWS real quanto contra o LocalStack, mudando só endpoint_url.
 
-    O parâmetro endpoint_url=None (padrão) faz o boto3 apontar para a AWS real; 
+    O parâmetro endpoint_url=None (padrão) faz o boto3 apontar para a AWS real;
     passar a URL do LocalStack (ex: http://localhost:4566) redireciona todas as chamadas sem nenhuma mudança de código;
     é a mesma ideia da variável de ambiente AWS_ENDPOINT_URL em app/core/config.py.
     """
@@ -111,7 +108,7 @@ def build_event_source(settings) -> EventSource:  # noqa: ANN001 - tipo importad
     """
     Fábrica: escolhe o adapter conforme `settings.event_source`.
 
-    Mantém a decisão de qual fonte usar centralizada num único lugar, 
+    Mantém a decisão de qual fonte usar centralizada num único lugar,
     ao invés de espalhar if event_source == "local" pelo resto do código.
     """
     if settings.event_source == "local":

@@ -98,10 +98,7 @@ def test_get_pools_impossible_filter_returns_404(client_with_sample_snapshot):
 
 
 def test_get_pools_argmax_strategy_is_deterministic(client_with_sample_snapshot):
-    responses = [
-        client_with_sample_snapshot.get("/get-pools?strategy=argmax").json()["pool_id"]
-        for _ in range(10)
-    ]
+    responses = [client_with_sample_snapshot.get("/get-pools?strategy=argmax").json()["pool_id"] for _ in range(10)]
     assert len(set(responses)) == 1
     assert responses[0] == "pool-r6.xlarge-us-east-1a"  # maior nota do SAMPLE_STATS
 
@@ -212,11 +209,7 @@ def test_metrics_contains_the_five_required_metrics(client_with_sample_snapshot)
 
 def test_metrics_gauges_reflect_published_snapshot(client_with_sample_snapshot):
     _, families = _parse_metrics(client_with_sample_snapshot)
-    values = {
-        family.name: family.samples[0].value
-        for family in families
-        if family.name != "pool_selector_requests"
-    }
+    values = {family.name: family.samples[0].value for family in families if family.name != "pool_selector_requests"}
 
     assert values["pool_selector_pools_tracked"] == len(SAMPLE_STATS)
     assert values["pool_selector_events_total"] == 573

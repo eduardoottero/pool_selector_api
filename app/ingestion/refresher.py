@@ -1,9 +1,9 @@
 """
 Loop de ingestão: lê eventos da fonte configurada, calcula o ranking e publica um novo snapshot periodicamente.
 
-Roda como uma task assíncrona em background, iniciada no startup da aplicação. 
+Roda como uma task assíncrona em background, iniciada no startup da aplicação.
 Cada ciclo é independente: uma falha em um ciclo (fonte indisponível, linha malformada) não derruba o processo.
-o snapshot anterior continua sendo servido até o próximo ciclo ter sucesso. Isso é o que dá à API a resiliência 
+o snapshot anterior continua sendo servido até o próximo ciclo ter sucesso. Isso é o que dá à API a resiliência
 que o requisito de alta disponibilidade pede: um problema temporário na fonte de dados não tira a API do ar.
 """
 
@@ -75,7 +75,7 @@ class EventCache:
 
 def build_snapshot(source: EventSource, cache: EventCache, settings: Settings) -> RankingSnapshot:
     """
-    Executa um ciclo completo: lista objetos, parseia (com cache incremental), 
+    Executa um ciclo completo: lista objetos, parseia (com cache incremental),
     agrega e devolve um snapshot pronto para publicar.
     """
     refs = source.list_objects()

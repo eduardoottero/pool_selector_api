@@ -19,7 +19,7 @@ from app.core.config import settings
 
 def ensure_bucket(client, bucket: str, region: str) -> None:
     """
-    Cria o bucket se ele ainda não existir — idempotente, 
+    Cria o bucket se ele ainda não existir — idempotente,
     então rodar o seeder de novo num bucket já populado não falha.
     """
     existing = {b["Name"] for b in client.list_buckets()["Buckets"]}
@@ -29,9 +29,7 @@ def ensure_bucket(client, bucket: str, region: str) -> None:
         # a API do S3 trata us-east-1 como caso especial: não aceita LocationConstraint para a região "padrão"
         client.create_bucket(Bucket=bucket)
     else:
-        client.create_bucket(
-            Bucket=bucket, CreateBucketConfiguration={"LocationConstraint": region}
-        )
+        client.create_bucket(Bucket=bucket, CreateBucketConfiguration={"LocationConstraint": region})
 
 
 def upload_dataset(client, bucket: str, prefix: str, source_dir: Path) -> int:

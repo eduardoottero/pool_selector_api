@@ -23,8 +23,7 @@ POOLS_TRACKED = Gauge(
 )
 EVENTS_TOTAL = Gauge(
     "pool_selector_events_total",
-    "Total de eventos considerados na construção do snapshot atual"
-    " (dentro da janela de lookback).",
+    "Total de eventos considerados na construção do snapshot atual" " (dentro da janela de lookback).",
     registry=registry,
 )
 MALFORMED_EVENTS_TOTAL = Gauge(

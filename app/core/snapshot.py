@@ -1,10 +1,10 @@
 """
 Snapshot imutável do ranking de pools.
 
-O snapshot é o que separa o cálculo 
-(que pode ser custoso, ler todos os eventos da janela de lookback) 
-do atendimento de uma requisição (que precisa ser O(1) mesmo sob rajada). 
-O loop de ingestão (refresher.py) recalcula o snapshot periodicamente e o publica aqui; 
+O snapshot é o que separa o cálculo
+(que pode ser custoso, ler todos os eventos da janela de lookback)
+do atendimento de uma requisição (que precisa ser O(1) mesmo sob rajada).
+O loop de ingestão (refresher.py) recalcula o snapshot periodicamente e o publica aqui;
 o endpoint da API só lê o snapshot publicado, nunca recalcula nada na hora da requisição.
 """
 
@@ -40,9 +40,7 @@ class RankingSnapshot:
         return (datetime.now(UTC) - self.built_at).total_seconds()
 
 
-EMPTY_SNAPSHOT = RankingSnapshot(
-    stats={}, built_at=datetime.now(UTC), malformed_events=0, total_events_considered=0
-)
+EMPTY_SNAPSHOT = RankingSnapshot(stats={}, built_at=datetime.now(UTC), malformed_events=0, total_events_considered=0)
 
 
 class SnapshotStore:

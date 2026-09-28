@@ -1,7 +1,7 @@
 """
 Rotas da API: /get-pools (+ alias /get-pool), /health e /metrics.
 
-O enunciado do desafio usa /get-pool num trecho e /get-pools (com a porta 5050) em outro, portando 
+O enunciado do desafio usa /get-pool num trecho e /get-pools (com a porta 5050) em outro, portando
 servi os dois apontando para o mesmo handler ao invés de escolher um dos dois por dedução
 """
 
@@ -51,17 +51,13 @@ def _matches_filters(
 def get_pools(
     instance_family: list[str] | None = Query(
         default=None,
-        description="Restringe a famílias de instância (ex: r6 para memória, c6 para CPU)."
-        " Repita o parâmetro para várias famílias.",
+        description="Restringe a famílias de instância (ex: r6 para memória, c6 para CPU)." " Repita o parâmetro para várias famílias.",
     ),
     instance_type: list[str] | None = Query(
         default=None,
-        description="Restringe a tipos exatos de instância (ex: r6.xlarge)."
-        " Repita o parâmetro para vários tipos.",
+        description="Restringe a tipos exatos de instância (ex: r6.xlarge)." " Repita o parâmetro para vários tipos.",
     ),
-    az: list[str] | None = Query(
-        default=None, description="Restringe a AZs específicas (ex: us-east-1a)."
-    ),
+    az: list[str] | None = Query(default=None, description="Restringe a AZs específicas (ex: us-east-1a)."),
     limit: int = Query(default=3, ge=1, le=10, description="Quantas alternativas retornar."),
     strategy: str = Query(
         default="sample",
@@ -77,22 +73,16 @@ def get_pools(
         record_request(503)
         raise HTTPException(
             status_code=503,
-            detail="nenhum dado de pool disponível ainda —"
-            " o snapshot inicial está sendo construído",
+            detail="nenhum dado de pool disponível ainda —" " o snapshot inicial está sendo construído",
         )
 
-    filtered = {
-        pool_id: stats
-        for pool_id, stats in snapshot.stats.items()
-        if _matches_filters(stats, instance_family, instance_type, az)
-    }
+    filtered = {pool_id: stats for pool_id, stats in snapshot.stats.items() if _matches_filters(stats, instance_family, instance_type, az)}
 
     if not filtered:
         record_request(404)
         raise HTTPException(
             status_code=404,
-            detail="nenhum pool encontrado para os filtros informados"
-            f" (instance_family={instance_family}, instance_type={instance_type}, az={az})",
+            detail="nenhum pool encontrado para os filtros informados" f" (instance_family={instance_family}, instance_type={instance_type}, az={az})",
         )
 
     chosen, candidates = choose_pool(filtered, strategy=strategy)

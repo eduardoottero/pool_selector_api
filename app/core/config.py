@@ -1,7 +1,7 @@
 """
 Configurações da aplicação.
 
-Centralizando aqui os parâmetros do algoritmo de scoring, isso permite alterar o comportamento de 
+Centralizando aqui os parâmetros do algoritmo de scoring, isso permite alterar o comportamento de
 produção sem precisar de um novo deploy, bastando uma mudança de variável de ambiente no serviço.
 """
 

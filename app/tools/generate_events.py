@@ -2,13 +2,13 @@
 Gerador de dados sintéticos de eventos de finalização de job Spark.
 
 Não existem dados reais para este desafio — este gerador é a demonstração.
-Ele planta 5 cenários que fazem o algoritmo de scoring (Etapa 2) produzir 
-um resultado visivelmente não-trivial, além de "ruído de fundo" realista 
+Ele planta 5 cenários que fazem o algoritmo de scoring (Etapa 2) produzir
+um resultado visivelmente não-trivial, além de "ruído de fundo" realista
 (chegada de jobs variando ao longo do dia, várias famílias de instância e AZs).
 
 Determinístico via --seed: a mesma seed sempre gera o mesmo dataset, o que torna a demonstração e os testes reprodutíveis.
 
-Saída: um arquivo JSONL por hora, em <out>/<data>/<hora>.jsonl — imita o ayout realista de um bucket S3 particionado por tempo, 
+Saída: um arquivo JSONL por hora, em <out>/<data>/<hora>.jsonl — imita o ayout realista de um bucket S3 particionado por tempo,
 e serve para a Etapa 3 exercitar leitura incremental de múltiplos objetos.
 """
 
@@ -63,7 +63,7 @@ def _event(
 
 def _diurnal_weight(hour: int) -> float:
     """
-    Fator de intensidade de jobs por hora do dia — picos às 9h e 13h, madrugada quieta. 
+    Fator de intensidade de jobs por hora do dia — picos às 9h e 13h, madrugada quieta.
     Modela o requisito de que o volume de jobs varia bastante ao longo do dia.
     """
     morning_peak = max(0.0, 1 - abs(hour - 9) / 4)
@@ -104,9 +104,7 @@ def generate_degrading_az_scenario(start: datetime, hours: int, rng: random.Rand
             if rng.random() < success_rate:
                 events.append(_event(ts, job_id, pool_id, Status.SUCCESS))
             else:
-                events.append(
-                    _event(ts, job_id, pool_id, Status.FAILED, Reason.SPOT_INSTANCE_TERMINATION)
-                )
+                events.append(_event(ts, job_id, pool_id, Status.FAILED, Reason.SPOT_INSTANCE_TERMINATION))
     return events
 
 
@@ -131,9 +129,7 @@ def generate_workhorse_scenario(start: datetime, hours: int, rng: random.Random)
             if rng.random() < 0.97:
                 events.append(_event(ts, job_id, pool_id, Status.SUCCESS))
             else:
-                events.append(
-                    _event(ts, job_id, pool_id, Status.FAILED, Reason.SPOT_INSTANCE_TERMINATION)
-                )
+                events.append(_event(ts, job_id, pool_id, Status.FAILED, Reason.SPOT_INSTANCE_TERMINATION))
     return events
 
 
@@ -159,12 +155,10 @@ def generate_lucky_newcomer_scenario(start: datetime, hours: int, rng: random.Ra
 # --- cenário 4: patologia de job (não do pool) ---------------------------------
 
 
-def generate_pathological_job_scenario(
-    start: datetime, hours: int, rng: random.Random
-) -> list[dict]:
+def generate_pathological_job_scenario(start: datetime, hours: int, rng: random.Random) -> list[dict]:
     """
-    Um job mal escrito ('bad-etl-job') falha ~80 vezes por TIMED_OUT e SPARK_EXECUTION_ERROR, 
-    concentrado no c6.xlarge-us-east-1b que é um pool saudável (também recebe execuções normais de outros jobs). 
+    Um job mal escrito ('bad-etl-job') falha ~80 vezes por TIMED_OUT e SPARK_EXECUTION_ERROR,
+    concentrado no c6.xlarge-us-east-1b que é um pool saudável (também recebe execuções normais de outros jobs).
     Prova que excluir essas razões do denominador impede que um job ruim derrube o score de um pool bom."""
     events = []
     pool_id = _pool_id("c6.xlarge", "us-east-1b")
@@ -186,9 +180,7 @@ def generate_pathological_job_scenario(
             if rng.random() < 0.96:
                 events.append(_event(ts, job_id, pool_id, Status.SUCCESS))
             else:
-                events.append(
-                    _event(ts, job_id, pool_id, Status.FAILED, Reason.SPOT_INSTANCE_TERMINATION)
-                )
+                events.append(_event(ts, job_id, pool_id, Status.FAILED, Reason.SPOT_INSTANCE_TERMINATION))
     return events
 
 
@@ -204,7 +196,7 @@ COLD_START_POOL = _pool_id("i3.xlarge", "us-east-1a")
 
 
 def generate_background_noise(start: datetime, hours: int, rng: random.Random) -> list[dict]:
-    """Preenche os demais pools (famílias x AZs não cobertas pelos cenários acima) 
+    """Preenche os demais pools (famílias x AZs não cobertas pelos cenários acima)
     com atividade moderada e taxas de sucesso plausíveis, para o dataset não parecer artificialmente vazio fora dos 5 cenários.
     """
     events = []
@@ -215,12 +207,7 @@ def generate_background_noise(start: datetime, hours: int, rng: random.Random) -
         _pool_id("c6.xlarge", "us-east-1b"),
         COLD_START_POOL,
     }
-    combinations = [
-        (instance_type, az)
-        for instance_type in ALL_INSTANCE_TYPES
-        for az in AZS
-        if _pool_id(instance_type, az) not in already_used_pools
-    ]
+    combinations = [(instance_type, az) for instance_type in ALL_INSTANCE_TYPES for az in AZS if _pool_id(instance_type, az) not in already_used_pools]
 
     for h in range(hours):
         hour_moment = start + timedelta(hours=h)
@@ -268,7 +255,7 @@ def generate_dataset(hours: int, seed: int, now: datetime | None = None) -> list
 
 def write_partitioned(events: list[dict], out_dir: Path) -> None:
     """
-    Escreve os eventos em <out_dir>/<AAAA-MM-DD>/<HH>.jsonl (um objeto por hora) 
+    Escreve os eventos em <out_dir>/<AAAA-MM-DD>/<HH>.jsonl (um objeto por hora)
     imitando o particionamento típico de um bucket S3 alimentado
     por um processo contínuo.
     """
@@ -307,9 +294,7 @@ def main() -> None:
     events = generate_dataset(hours=args.hours, seed=args.seed, now=now)
     write_partitioned(events, args.out)
 
-    print(
-        f"Gerados {len(events)} eventos em {args.out}/ (seed={args.seed}, janela={args.hours}h)"
-    )
+    print(f"Gerados {len(events)} eventos em {args.out}/ (seed={args.seed}, janela={args.hours}h)")
 
 
 if __name__ == "__main__":

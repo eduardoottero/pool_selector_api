@@ -71,18 +71,11 @@ def test_degrading_az_scenario_worsens_in_the_last_hours():
 
 def test_pathological_job_scenario_does_not_count_as_pool_failure():
     events = generate_dataset(hours=48, seed=42, now=FIXED_NOW)
-    bad_job = [
-        e
-        for e in events
-        if e["pool_id"] == "pool-c6.xlarge-us-east-1b" and e["job_id"] == "bad-etl-job"
-    ]
+    bad_job = [e for e in events if e["pool_id"] == "pool-c6.xlarge-us-east-1b" and e["job_id"] == "bad-etl-job"]
 
     assert len(bad_job) > 50
     assert all(e["status"] == "FAILED" for e in bad_job)
-    assert all(
-        e["reason"] in ("TIMED_OUT", "SPARK_EXECUTION_ERROR")
-        for e in bad_job
-    )
+    assert all(e["reason"] in ("TIMED_OUT", "SPARK_EXECUTION_ERROR") for e in bad_job)
 
     # Essas falhas não devem ser SPOT_INSTANCE_TERMINATION.
     # Caso contrário, o teste da Etapa 2 sobre a exclusão de job_fault

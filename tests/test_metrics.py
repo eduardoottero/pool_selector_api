@@ -93,9 +93,7 @@ def test_render_metrics_reflects_snapshot_fields_in_gauges():
 
     assert _metric_value(families, "pool_selector_pools_tracked") == len(snapshot.stats)
     assert _metric_value(families, "pool_selector_events_total") == snapshot.total_events_considered
-    assert (
-        _metric_value(families, "pool_selector_malformed_events_total") == snapshot.malformed_events
-    )
+    assert _metric_value(families, "pool_selector_malformed_events_total") == snapshot.malformed_events
     age = _metric_value(families, "pool_selector_snapshot_age_seconds")
     assert age is not None
     assert age >= 0.0
@@ -111,9 +109,7 @@ def test_render_metrics_output_is_nonempty_bytes():
 def test_render_metrics_output_parses_with_official_parser_and_declares_correct_types():
     body = render_metrics(_sample_snapshot())
 
-    families = {
-        family.name: family for family in text_string_to_metric_families(body.decode("utf-8"))
-    }
+    families = {family.name: family for family in text_string_to_metric_families(body.decode("utf-8"))}
 
     expected_gauges = {
         "pool_selector_snapshot_age_seconds",

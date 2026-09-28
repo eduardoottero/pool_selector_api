@@ -19,9 +19,7 @@ def test_snapshot_store_starts_with_empty_snapshot():
 
 def test_publish_replaces_the_current_snapshot():
     store = SnapshotStore()
-    new_snapshot = RankingSnapshot(
-        stats={}, built_at=datetime.now(UTC), malformed_events=0, total_events_considered=5
-    )
+    new_snapshot = RankingSnapshot(stats={}, built_at=datetime.now(UTC), malformed_events=0, total_events_considered=5)
 
     store.publish(new_snapshot)
 
@@ -42,9 +40,7 @@ def test_age_seconds_reflects_time_since_built_at():
 def test_snapshot_is_immutable():
     """Um snapshot frozen não pode ser alterado depois de criado — é o que
     garante que requisições concorrentes nunca vejam um estado parcial."""
-    snapshot = RankingSnapshot(
-        stats={}, built_at=datetime.now(UTC), malformed_events=0, total_events_considered=0
-    )
+    snapshot = RankingSnapshot(stats={}, built_at=datetime.now(UTC), malformed_events=0, total_events_considered=0)
     try:
         snapshot.total_events_considered = 999  # type: ignore[misc]
         raised = False
