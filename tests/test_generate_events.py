@@ -79,8 +79,14 @@ def test_pathological_job_scenario_does_not_count_as_pool_failure():
 
     assert len(bad_job) > 50
     assert all(e["status"] == "FAILED" for e in bad_job)
-    assert all(e["reason"] in ("TIMED_OUT", "SPARK_EXECUTION_ERROR") for e in bad_job)
-    # nenhuma dessas falhas deve ser SPOT_INSTANCE_TERMINATION — senão o teste da Etapa 2 que prova a exclusão de job_fault ficaria sem sentido
+    assert all(
+        e["reason"] in ("TIMED_OUT", "SPARK_EXECUTION_ERROR")
+        for e in bad_job
+    )
+
+    # Essas falhas não devem ser SPOT_INSTANCE_TERMINATION.
+    # Caso contrário, o teste da Etapa 2 sobre a exclusão de job_fault
+    # perderia o sentido.
     assert not any(e["reason"] == "SPOT_INSTANCE_TERMINATION" for e in bad_job)
 
 
