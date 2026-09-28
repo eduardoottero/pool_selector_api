@@ -2,10 +2,10 @@
 Algoritmo de scoring: sistema de pontos que ranqueia pools de instâncias
 spot pela probabilidade de um job executar sem perder a instância.
 
-O racional completo da escolha está em docs/adr/0003-algoritmo-scoring.md; 
-resumo: como o passo final sorteia entre os melhores candidatos, ganhar 
-resolução decimal na nota não muda o resultado, e um cálculo auditável de 
-cabeça é mais valioso operacionalmente do que alguns pontos percentuais 
+O racional completo da escolha está em docs/adr/0003-algoritmo-scoring.md;
+resumo: como o passo final sorteia entre os melhores candidatos, ganhar
+resolução decimal na nota não muda o resultado, e um cálculo auditável de
+cabeça é mais valioso operacionalmente do que alguns pontos percentuais
 de precisão.
 
 Funções puras, sem I/O: recebem eventos e o instante de referência, devolvem
