@@ -3,7 +3,7 @@
 # desafio). O racional de cada escolha está em docs/adr/0005-topologia-aws.md.
 #
 # Fluxo: Route53 -> ALB -> ECS Fargate (a API) -> lê do S3 (bucket de eventos).
-# Fargate em vez de Lambda: o snapshot em memória (Etapa 3) precisa de um
+# Fargate ao invés de Lambda: o snapshot em memória (Etapa 3) precisa de um
 # processo de vida longa com um loop de background — Lambda não sustenta
 # isso sem reconstruir o snapshot do zero a cada cold start.
 

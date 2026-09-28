@@ -1,4 +1,5 @@
-"""Testes do loop de ingestão: cache incremental, resiliência a linha
+"""
+Testes do loop de ingestão: cache incremental, resiliência a linha
 malformada e a falha de fonte, e a publicação periódica do snapshot.
 """
 
@@ -182,7 +183,7 @@ async def test_refresh_loop_publishes_a_snapshot_on_first_iteration(tmp_path):
 async def test_refresh_loop_survives_a_failing_source():
     """Uma fonte que sempre levanta exceção não deve travar o loop nem
     impedir que ele seja parado — a API continua servindo o snapshot vazio
-    anterior em vez de cair."""
+    anterior ao invés de cair."""
 
     class BrokenSource:
         def list_objects(self):

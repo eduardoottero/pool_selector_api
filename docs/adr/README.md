@@ -1,9 +1,6 @@
 # Architecture Decision Records
 
-Cada arquivo aqui documenta uma decisão arquitetural: o problema que a
-motivou, a escolha feita, o racional técnico e as alternativas
-consideradas. Formato leve — contexto, decisão, porquê, alternativas — sem
-o overhead de um template pesado.
+Cada arquivo aqui documenta uma decisão arquitetural: o problema que a motivou, a escolha feita, o racional técnico e as alternativas consideradas. Formato leve — contexto, decisão, porquê, alternativas — sem o overhead de um template pesado.
 
 | ADR | Decisão |
 |---|---|

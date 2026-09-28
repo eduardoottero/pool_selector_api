@@ -1,16 +1,13 @@
 # API
 
-Documentação interativa completa (gerada automaticamente pelo FastAPI a
-partir dos schemas em `app/api/schemas.py`): `http://localhost:5050/docs`.
-Este documento cobre o contrato e os casos de borda em prosa.
+Documentação interativa completa (gerada automaticamente pelo FastAPI a partir dos schemas em `app/api/schemas.py`): `http://localhost:5050/docs`. Este documento cobre o contrato e os casos de borda em prosa.
 
 ## `GET /get-pools` (canônico) / `GET /get-pool` (alias)
 
-O enunciado do desafio usa os dois nomes em trechos diferentes — os dois
-apontam para o mesmo handler. Ver [ADR 0006](./adr/0006-get-pool-vs-get-pools.md).
+O enunciado do desafio usa os dois nomes em trechos diferentes — os dois apontam para o mesmo handler. 
+Ver [ADR 0006](./adr/0006-get-pool-vs-get-pools.md).
 
-Devolve o pool recomendado para um job Spark executar, junto com a nota,
-as estatísticas que embasaram a decisão, e alternativas consideradas.
+Devolve o pool recomendado para um job Spark executar, junto com a nota, as estatísticas que embasaram a decisão, e alternativas consideradas.
 
 ### Parâmetros de query
 
@@ -22,9 +19,7 @@ as estatísticas que embasaram a decisão, e alternativas consideradas.
 | `limit` | int (1–10) | 3 | Quantas alternativas retornar |
 | `strategy` | `sample` \| `argmax` | `sample` | `sample` sorteia entre os melhores (anti-manada); `argmax` é determinístico |
 
-`instance_family` cobre o caso de uso descrito no enunciado ("apenas
-instâncias focadas em memória") sem exigir que quem chama enumere cada
-tipo; `instance_type` dá controle exato quando necessário.
+`instance_family` cobre o caso de uso descrito no enunciado ("apenas instâncias focadas em memória") sem exigir que quem chama enumere cada tipo; `instance_type` dá controle exato quando necessário.
 
 ### Resposta — `200 OK`
 
@@ -48,9 +43,7 @@ tipo; `instance_type` dá controle exato quando necessário.
 }
 ```
 
-`stats` e `alternatives` tornam a decisão inspecionável sem precisar ler
-o código — ver [`docs/algorithm.md`](./algorithm.md) para o que cada
-número significa.
+`stats` e `alternatives` tornam a decisão inspecionável sem precisar ler o código — ver [`docs/algorithm.md`](./algorithm.md) para o que cada número significa.
 
 ### Erros
 
@@ -60,10 +53,7 @@ número significa.
 | `422` | Parâmetro inválido (ex.: `strategy=xyz`) | Erro de validação padrão do FastAPI/Pydantic |
 | `503` | O snapshot inicial ainda não foi construído (API acabou de subir) | `{"detail": "nenhum dado de pool disponível ainda — ..."}` |
 
-A distinção entre 404 e 503 é deliberada: 404 diz "seu filtro não tem
-correspondência", 503 diz "o serviço ainda não está pronto" — sinalizações
-diferentes que levam a ações diferentes (ajustar o filtro vs. tentar de
-novo em instantes).
+A distinção entre 404 e 503 é deliberada: 404 diz "seu filtro não tem correspondência", 503 diz "o serviço ainda não está pronto" — sinalizações diferentes que levam a ações diferentes (ajustar o filtro vs. tentar de novo em instantes).
 
 ## `GET /health`
 
@@ -89,15 +79,13 @@ novo em instantes).
 }
 ```
 
-Além de servir como health check (usado pelo ALB em produção, ver ADR
-0004), expõe:
+Além de servir como health check (usado pelo ALB em produção, ver ADR 0004), expõe:
 
-- **`snapshot_age_seconds`**: detecta um `refresh_loop` travado antes que
-  vire um problema visível para quem chama `/get-pools`.
-- **`malformed_events`**: quantas linhas do JSONL foram descartadas por
-  não corresponderem ao schema — sinal de qualidade de dados na fonte.
-- **`parameters`**: os valores efetivos do algoritmo em produção,
-  auditáveis sem acesso ao código nem a um redeploy.
+- **`snapshot_age_seconds`**: detecta um `refresh_loop` travado antes que vire um problema visível para quem chama `/get-pools`.
+
+- **`malformed_events`**: quantas linhas do JSONL foram descartadas por não corresponderem ao schema — sinal de qualidade de dados na fonte.
+
+- **`parameters`**: os valores efetivos do algoritmo em produção, auditáveis sem acesso ao código nem a um redeploy.
 
 ## Exemplos
 

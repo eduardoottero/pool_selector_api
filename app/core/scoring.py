@@ -1,16 +1,13 @@
-"""Algoritmo de scoring: sistema de pontos que ranqueia pools de instâncias
-spot pela probabilidade de um job executar sem perder a instância.
+"""
+Algoritmo de scoring: sistema de pontos que ranqueia pools de instâncias spot pela probabilidade de um job executar sem perder a instância.
 
-Deliberadamente aritmético — contagem, pesos inteiros e uma divisão — em vez
-de um estimador estatístico (ex.: limite de Wilson). O racional completo da
-escolha está em docs/adr/0003-algoritmo-scoring.md; resumo: como o passo
-final sorteia entre os melhores candidatos, ganhar resolução decimal na nota
-não muda o resultado, e um cálculo auditável de cabeça é mais valioso
-operacionalmente do que alguns pontos percentuais de precisão.
-
-Funções puras, sem I/O: recebem eventos e o instante de referência, devolvem
-dados. Isso é o que torna o algoritmo testável em isolamento (TDD) e reusável
-tanto para o loop de ingestão (Etapa 3) quanto para testes de regressão.
+Esse sistema de pontos aritmético é composto pelos seguinte passos: 
+1 - peso por idade do evento (3/2/1, em degraus) - primeiramente, eventos mais recentes pesam mais, para que uma AZ que piorou recentemente tenha sua nota puxada para baixo; 
+2 - classificação em bom/ruim/ignorado - os eventos de job são classificados em três categorias: bom (job terminou com sucesso), ruim (job falhou por perda da instância spot) e ignorado (job falhou por outro motivo, como timeout ou erro de execução do Spark);
+3 - agregação por pool - os eventos são agregados por pool, somando os pesos de cada categoria e contando o total de eventos considerados; 
+4 - cálculo da nota e escolha do pool - sorteio ponderado entre os 3 melhores pools. O vencedor do sorteio é o pool recomendado pela API, os outros dois são alternativas. 
+O algoritmo é determinístico para o mesmo conjunto de eventos, mas o sorteio ponderado evita que uma rajada de jobs mande todos para o 
+mesmo pool e estoure a capacidade da AZ que os atraiu.
 """
 
 from __future__ import annotations
@@ -26,7 +23,9 @@ from app.domain.events import JobEvent, Reason, Status
 
 @dataclass(frozen=True)
 class PoolStats:
-    """Estatísticas acumuladas de um pool, já com os pontos ponderados por idade."""
+    """
+    Estatísticas acumuladas de um pool, já com os pontos ponderados por idade.
+    """
 
     pool_id: str
     good_points: float  # soma dos pesos dos eventos SUCCESS
@@ -36,21 +35,24 @@ class PoolStats:
 
     @property
     def score(self) -> float:
-        """Nota entre 0 e 1: fração de pontos bons, com pontos de cortesia
+        """
+        Nota entre 0 e 1: fração de pontos bons, com pontos de cortesia
         de cada lado para não deixar um pool com poucos eventos vencer por
-        sorte. Pool sem nenhum evento dá nota = 0.5 automaticamente."""
+        sorte. Pool sem nenhum evento dá nota = 0.5 automaticamente.
+        """
         courtesy = settings.courtesy_points
         return (self.good_points + courtesy) / (self.good_points + self.bad_points + 2 * courtesy)
 
 
 def weight_by_age(age_hours: float) -> float:
-    """Peso de um evento conforme sua idade. Eventos recentes pesam mais —
-    é como a API reage a uma AZ que piorou "só agora", em vez de diluir o
+    """
+    Peso de um evento conforme sua idade. Eventos recentes pesam mais —
+    é como a API reage a uma AZ que piorou "só agora", ao invés de diluir o
     sinal na média histórica do dia inteiro. Eventos mais velhos que a
-    janela de lookback são descartados (peso 0)."""
+    janela de lookback são descartados (peso 0).
+    """
     if age_hours < 0:
-        # evento no "futuro" (relógio do produtor adiantado, por exemplo) —
-        # trata como o mais recente possível em vez de rejeitar
+        # evento no "futuro" (relógio do produtor adiantado, por exemplo) — trata como o mais recente possível ao invés de rejeitar
         age_hours = 0.0
     if age_hours < settings.window_recent_h:
         return float(settings.weight_recent)
@@ -62,7 +64,8 @@ def weight_by_age(age_hours: float) -> float:
 
 
 def classify_event(event: JobEvent) -> str:
-    """Classifica um evento em 'good', 'bad' ou 'ignored'.
+    """
+    Classifica um evento em 'good', 'bad' ou 'ignored'.
 
     Só SPOT_INSTANCE_TERMINATION é sinal de disponibilidade da AZ. As outras
     duas razões de falha (TIMED_OUT, SPARK_EXECUTION_ERROR) dizem que o job
@@ -77,11 +80,12 @@ def classify_event(event: JobEvent) -> str:
 
 
 def compute_stats(events: list[JobEvent], now: datetime) -> dict[str, PoolStats]:
-    """Agrega uma lista de eventos em estatísticas por pool.
+    """
+    Agrega uma lista de eventos em estatísticas por pool.
 
     Função pura central do algoritmo: dado um conjunto de eventos e um
     instante de referência, devolve as estatísticas ponderadas de cada pool
-    observado. Não faz I/O — quem chama decide de onde vieram os eventos
+    observado. Quem chama decide de onde vieram os eventos
     (disco, S3, um teste) e quando é "agora".
     """
     accumulated: dict[str, list[tuple[str, float]]] = defaultdict(list)
@@ -111,8 +115,10 @@ def compute_stats(events: list[JobEvent], now: datetime) -> dict[str, PoolStats]
 
 
 def rank(stats: dict[str, PoolStats]) -> list[PoolStats]:
-    """Ordena os pools da maior para a menor nota. Empates são desfeitos
-    por pool_id para tornar a ordem determinística em testes."""
+    """
+    Ordena os pools da maior para a menor nota. Empates são desfeitos
+    por pool_id para tornar a ordem determinística em testes.
+    """
     return sorted(stats.values(), key=lambda s: (-s.score, s.pool_id))
 
 
@@ -121,7 +127,8 @@ def choose_pool(
     strategy: str = "sample",
     rng: random.Random | None = None,
 ) -> tuple[PoolStats, list[PoolStats]]:
-    """Escolhe um pool dentre os melhores candidatos.
+    """
+    Escolhe um pool dentre os melhores candidatos.
 
     strategy="sample" (padrão): sorteia entre os TOP_K melhores, com
     chance proporcional à nota. Evita que uma rajada de jobs mande todos

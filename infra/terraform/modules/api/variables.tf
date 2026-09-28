@@ -42,7 +42,7 @@ variable "task_memory" {
 }
 
 variable "container_image" {
-  description = "Imagem da API a implantar (ex.: <account>.dkr.ecr.<region>.amazonaws.com/pool-selector-api:<tag>)."
+  description = "Imagem da API a implantar (ex: <account>.dkr.ecr.<region>.amazonaws.com/pool-selector-api:<tag>)."
   type        = string
 }
 

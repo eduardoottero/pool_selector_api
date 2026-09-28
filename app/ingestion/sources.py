@@ -1,12 +1,11 @@
-"""Fonte de eventos: de onde a ingestão lê os arquivos JSONL.
+"""
+Fonte de eventos: de onde a ingestão lê os arquivos JSONL.
 
-Um Protocol (interface estrutural do Python) define o contrato, com duas
-implementações: leitura do disco local (padrão, usada pelo `make dev`, sem
-nenhuma dependência de nuvem) e leitura via boto3 de um bucket S3 real ou do
-LocalStack. As duas implementações usam exatamente o mesmo código de
-parsing — só muda de onde os bytes vêm. O caminho do S3 é código real,
-testado com moto (ver tests/test_s3_source.py), não apenas uma promessa
-de design.
+Um Protocol (interface estrutural do Python) define o contrato, com duas implementações: 
+leitura do disco local (padrão, usada pelo `make dev`, sem nenhuma dependência de nuvem) e 
+leitura via boto3 de um bucket S3 real ou do LocalStack. 
+As duas implementações usam exatamente o mesmo código de parsing, só muda de onde os bytes vêm. 
+O caminho do S3 é código real, testado com moto (ver tests/test_s3_source.py).
 """
 
 from __future__ import annotations
@@ -18,11 +17,11 @@ from typing import Protocol
 
 @dataclass(frozen=True)
 class ObjectRef:
-    """Referência a um objeto de eventos (um arquivo local ou uma key do S3).
+    """
+    Referência a um objeto de eventos (um arquivo local ou uma key do S3).
 
-    `version` é usado para leitura incremental: no adapter local é o
-    mtime do arquivo; no S3 seria o ETag do objeto. Se a versão não mudou
-    desde a última leitura, o refresher (Etapa 3) pode pular esse objeto.
+    `version` é usado para leitura incremental: no adapter local é o mtime do arquivo; 
+    no S3 seria o ETag do objeto. Se a versão não mudou desde a última leitura, o refresher (Etapa 3) pode pular esse objeto.
     """
 
     key: str
@@ -30,23 +29,29 @@ class ObjectRef:
 
 
 class EventSource(Protocol):
-    """Contrato que qualquer fonte de eventos deve implementar."""
+    """
+    Contrato que qualquer fonte de eventos deve implementar.
+    """
 
     def list_objects(self) -> list[ObjectRef]:
-        """Lista todos os objetos de eventos disponíveis na fonte."""
+        """
+        Lista todos os objetos de eventos disponíveis na fonte.
+        """
         ...
 
     def read_lines(self, ref: ObjectRef) -> list[str]:
-        """Lê as linhas JSONL de um objeto específico."""
+        """
+        Lê as linhas JSONL de um objeto específico.
+        """
         ...
 
 
 class LocalFileEventSource:
-    """Lê eventos de arquivos JSONL no disco local.
+    """
+    Lê eventos de arquivos JSONL no disco local.
 
     É a fonte padrão do projeto — usada por `make dev` sem exigir nenhuma
-    dependência de nuvem ou container. Espera o layout gerado pela Etapa 1:
-    `<base_dir>/<data>/<hora>.jsonl`.
+    dependência de nuvem ou container. Espera o layout gerado pela Etapa 1: <base_dir>/<data>/<hora>.jsonl.
     """
 
     def __init__(self, base_dir: str | Path):
@@ -66,13 +71,12 @@ class LocalFileEventSource:
 
 
 class S3EventSource:
-    """Lê eventos de um bucket S3 via boto3 — funciona tanto contra a AWS
-    real quanto contra o LocalStack, mudando só `endpoint_url`.
+    """
+    Lê eventos de um bucket S3 via boto3 — funciona tanto contra a AWS real quanto contra o LocalStack, mudando só endpoint_url.
 
-    O parâmetro `endpoint_url=None` (padrão) faz o boto3 apontar para a AWS
-    real; passar a URL do LocalStack (ex.: http://localhost:4566) redireciona
-    todas as chamadas sem nenhuma mudança de código — é a mesma ideia da
-    variável de ambiente AWS_ENDPOINT_URL em app/core/config.py.
+    O parâmetro endpoint_url=None (padrão) faz o boto3 apontar para a AWS real; 
+    passar a URL do LocalStack (ex: http://localhost:4566) redireciona todas as chamadas sem nenhuma mudança de código;
+    é a mesma ideia da variável de ambiente AWS_ENDPOINT_URL em app/core/config.py.
     """
 
     def __init__(
@@ -93,7 +97,7 @@ class S3EventSource:
         paginator = self._client.get_paginator("list_objects_v2")
         for page in paginator.paginate(Bucket=self.bucket, Prefix=self.prefix):
             for obj in page.get("Contents", []):
-                # ETag vem entre aspas na resposta do S3 (ex.: '"abc123"')
+                # ETag vem entre aspas na resposta do S3 (ex: '"abc123"')
                 objects.append(ObjectRef(key=obj["Key"], version=obj["ETag"].strip('"')))
         return objects
 
@@ -104,10 +108,11 @@ class S3EventSource:
 
 
 def build_event_source(settings) -> EventSource:  # noqa: ANN001 - tipo importado só em runtime
-    """Fábrica: escolhe o adapter conforme `settings.event_source`.
+    """
+    Fábrica: escolhe o adapter conforme `settings.event_source`.
 
-    Mantém a decisão de qual fonte usar centralizada num único lugar, em
-    vez de espalhar `if event_source == "local"` pelo resto do código.
+    Mantém a decisão de qual fonte usar centralizada num único lugar, 
+    ao invés de espalhar if event_source == "local" pelo resto do código.
     """
     if settings.event_source == "local":
         return LocalFileEventSource(settings.local_events_dir)

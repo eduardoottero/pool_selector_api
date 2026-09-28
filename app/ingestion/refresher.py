@@ -1,12 +1,10 @@
-"""Loop de ingestão: lê eventos da fonte configurada, calcula o ranking e
-publica um novo snapshot periodicamente.
+"""
+Loop de ingestão: lê eventos da fonte configurada, calcula o ranking e publica um novo snapshot periodicamente.
 
-Roda como uma task assíncrona em background (ver app/main.py, Etapa 4),
-iniciada no startup da aplicação. Cada ciclo é independente: uma falha em
-um ciclo (fonte indisponível, linha malformada) não derruba o processo —
-o snapshot anterior continua sendo servido até o próximo ciclo ter sucesso.
-Isso é o que dá à API a resiliência que o requisito de alta disponibilidade
-pede: um problema temporário na fonte de dados não tira a API do ar.
+Roda como uma task assíncrona em background, iniciada no startup da aplicação. 
+Cada ciclo é independente: uma falha em um ciclo (fonte indisponível, linha malformada) não derruba o processo.
+o snapshot anterior continua sendo servido até o próximo ciclo ter sucesso. Isso é o que dá à API a resiliência 
+que o requisito de alta disponibilidade pede: um problema temporário na fonte de dados não tira a API do ar.
 """
 
 from __future__ import annotations
@@ -28,7 +26,8 @@ logger = logging.getLogger(__name__)
 
 
 class EventCache:
-    """Cache incremental: guarda os eventos já parseados por objeto, para
+    """
+    Cache incremental: guarda os eventos já parseados por objeto, para
     não reler e reparsear tudo a cada ciclo do refresher.
 
     Cada entrada é identificada por (key, version) do ObjectRef. Se a versão
@@ -65,16 +64,20 @@ class EventCache:
         return events
 
     def forget_stale(self, current_keys: set[str]) -> None:
-        """Remove do cache objetos que não existem mais na fonte (ex.: saíram
-        da janela de retenção do bucket), evitando crescimento ilimitado."""
+        """
+        Remove do cache objetos que não existem mais na fonte (ex: saíram
+        da janela de retenção do bucket), evitando crescimento ilimitado.
+        """
         stale = set(self._cache) - current_keys
         for key in stale:
             del self._cache[key]
 
 
 def build_snapshot(source: EventSource, cache: EventCache, settings: Settings) -> RankingSnapshot:
-    """Executa um ciclo completo: lista objetos, parseia (com cache
-    incremental), agrega e devolve um snapshot pronto para publicar."""
+    """
+    Executa um ciclo completo: lista objetos, parseia (com cache incremental), 
+    agrega e devolve um snapshot pronto para publicar.
+    """
     refs = source.list_objects()
     cache.forget_stale({ref.key for ref in refs})
 
@@ -99,11 +102,10 @@ async def refresh_loop(
     settings: Settings,
     stop_event: asyncio.Event | None = None,
 ) -> None:
-    """Loop infinito (até `stop_event` ser sinalizado): recalcula e publica
-    o snapshot a cada `settings.refresh_interval_seconds`.
+    """
+    Loop infinito (até `stop_event` ser sinalizado): recalcula e publica o snapshot a cada `settings.refresh_interval_seconds`.
 
-    `stop_event` existe para permitir parar o loop em testes e no shutdown
-    da aplicação, sem depender de matar a task à força.
+    `stop_event` existe para permitir parar o loop em testes e no shutdown da aplicação, sem depender de matar a task à força.
     """
     cache = EventCache()
     stop_event = stop_event or asyncio.Event()

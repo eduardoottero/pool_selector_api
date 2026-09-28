@@ -1,4 +1,5 @@
-"""Testes do algoritmo de scoring — o núcleo do projeto.
+"""
+Testes do algoritmo de scoring — o núcleo do projeto.
 
 Cada teste aqui corresponde a um dos comportamentos que justificam as
 decisões de design do algoritmo (ver docs/algorithm.md e o ADR de scoring):

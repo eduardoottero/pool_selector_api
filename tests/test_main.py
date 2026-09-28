@@ -1,4 +1,5 @@
-"""Testes de fumaça da aplicação — provam que a API sobe e responde.
+"""
+Testes de fumaça da aplicação — provam que a API sobe e responde.
 
 Usa o TestClient com o lifespan real, então o refresh_loop roda de verdade
 contra o EVENT_SOURCE configurado no ambiente de teste (local, apontando

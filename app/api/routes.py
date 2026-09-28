@@ -1,14 +1,14 @@
-"""Rotas da API: /get-pools (+ alias /get-pool) e /health.
+"""
+Rotas da API: /get-pools (+ alias /get-pool), /health e /metrics.
 
-O enunciado do desafio usa /get-pool num trecho e /get-pools (com a porta
-5050) noutro — servimos os dois apontando para o mesmo handler, e
-documentamos a ambiguidade no ADR correspondente (Etapa 7), em vez de
-escolher um dos dois por adivinhação.
+O enunciado do desafio usa /get-pool num trecho e /get-pools (com a porta 5050) em outro, portando 
+servi os dois apontando para o mesmo handler ao invés de escolher um dos dois por dedução
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
+from prometheus_client import CONTENT_TYPE_LATEST
 
 from app.api.schemas import (
     GetPoolsResponse,
@@ -17,6 +17,7 @@ from app.api.schemas import (
     PoolStatsResponse,
 )
 from app.core.config import settings
+from app.core.metrics import record_request, render_metrics
 from app.core.scoring import PoolStats, choose_pool
 from app.core.snapshot import snapshot_store
 from app.domain.events import parse_pool_id
@@ -30,9 +31,10 @@ def _matches_filters(
     instance_type: list[str] | None,
     az: list[str] | None,
 ) -> bool:
-    """Extrai instance_type/instance_family/az do pool_id para aplicar os
-    filtros do requisito 2, sem precisar guardar esses campos separadamente
-    em PoolStats (que é deliberadamente enxuto — ver Etapa 2)."""
+    """
+    Extrai instance_type/instance_family/az do pool_id para aplicar os
+    filtros do requisito 2.
+    """
     parsed = parse_pool_id(pool.pool_id)
 
     if instance_type and parsed.instance_type not in instance_type:
@@ -49,16 +51,16 @@ def _matches_filters(
 def get_pools(
     instance_family: list[str] | None = Query(
         default=None,
-        description="Restringe a famílias de instância (ex.: r6 para memória, c6 para CPU)."
+        description="Restringe a famílias de instância (ex: r6 para memória, c6 para CPU)."
         " Repita o parâmetro para várias famílias.",
     ),
     instance_type: list[str] | None = Query(
         default=None,
-        description="Restringe a tipos exatos de instância (ex.: r6.xlarge)."
+        description="Restringe a tipos exatos de instância (ex: r6.xlarge)."
         " Repita o parâmetro para vários tipos.",
     ),
     az: list[str] | None = Query(
-        default=None, description="Restringe a AZs específicas (ex.: us-east-1a)."
+        default=None, description="Restringe a AZs específicas (ex: us-east-1a)."
     ),
     limit: int = Query(default=3, ge=1, le=10, description="Quantas alternativas retornar."),
     strategy: str = Query(
@@ -72,6 +74,7 @@ def get_pools(
     snapshot = snapshot_store.current
 
     if not snapshot.stats:
+        record_request(503)
         raise HTTPException(
             status_code=503,
             detail="nenhum dado de pool disponível ainda —"
@@ -85,6 +88,7 @@ def get_pools(
     }
 
     if not filtered:
+        record_request(404)
         raise HTTPException(
             status_code=404,
             detail="nenhum pool encontrado para os filtros informados"
@@ -93,6 +97,7 @@ def get_pools(
 
     chosen, candidates = choose_pool(filtered, strategy=strategy)
 
+    record_request(200)
     return GetPoolsResponse(
         pool_id=chosen.pool_id,
         score=chosen.score,
@@ -130,3 +135,9 @@ def health() -> HealthResponse:
             "refresh_interval_seconds": settings.refresh_interval_seconds,
         },
     )
+
+
+@router.get("/metrics")
+def metrics() -> Response:
+    body = render_metrics(snapshot_store.current)
+    return Response(content=body, media_type=CONTENT_TYPE_LATEST)

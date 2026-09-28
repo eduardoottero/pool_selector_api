@@ -1,8 +1,9 @@
-"""Testes do adapter de fonte de eventos local (disco).
+"""
+Testes do adapter de fonte de eventos local (disco).
 
 O adapter S3 é testado com moto na Etapa 5 (junto com o Docker/LocalStack),
 já que exige mockar a API do boto3 — aqui cobrimos só o adapter que o
-`make dev` usa por padrão.
+make dev usa por padrão.
 """
 
 from app.ingestion.sources import LocalFileEventSource

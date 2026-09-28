@@ -1,7 +1,8 @@
-"""Testes das rotas /get-pools, /get-pool e /health.
+"""
+Testes das rotas /get-pools, /get-pool e /health.
 
 Publica um RankingSnapshot controlado diretamente no snapshot_store antes
-de cada teste, em vez de depender do lifespan real (que dispararia o
+de cada teste, ao invés de depender do lifespan real (que dispararia o
 refresh_loop lendo data/events do disco) — mais rápido, determinístico, e
 isolado do estado real do projeto.
 """
@@ -10,6 +11,7 @@ from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
+from prometheus_client.parser import text_string_to_metric_families
 
 from app.core.scoring import PoolStats
 from app.core.snapshot import EMPTY_SNAPSHOT, RankingSnapshot, snapshot_store
@@ -167,3 +169,88 @@ def test_health_works_even_with_empty_snapshot():
 
     assert response.status_code == 200
     assert response.json()["pools_tracked"] == 0
+
+
+# --- /metrics --------------------------------------------------------------
+
+
+def _parse_metrics(client):
+    """Lê /metrics e devolve as famílias já parseadas pelo parser oficial."""
+    response = client.get("/metrics")
+    families = list(text_string_to_metric_families(response.text))
+    return response, families
+
+
+def _requests_total_by_status(families, status):
+    for family in families:
+        if family.name == "pool_selector_requests":
+            for sample in family.samples:
+                if sample.labels.get("status") == status:
+                    return sample.value
+    return 0.0
+
+
+def test_metrics_returns_200_with_prometheus_content_type(client_with_sample_snapshot):
+    response = client_with_sample_snapshot.get("/metrics")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/plain; version=0.0.4; charset=utf-8"
+
+
+def test_metrics_contains_the_five_required_metrics(client_with_sample_snapshot):
+    _, families = _parse_metrics(client_with_sample_snapshot)
+    names = {family.name for family in families}
+
+    assert "pool_selector_snapshot_age_seconds" in names
+    assert "pool_selector_pools_tracked" in names
+    assert "pool_selector_events_total" in names
+    assert "pool_selector_malformed_events_total" in names
+    # o Counter aparece sem o sufixo "_total" no nome de família (ver
+    # tests/test_metrics.py para a explicação dessa convenção do parser)
+    assert "pool_selector_requests" in names
+
+
+def test_metrics_gauges_reflect_published_snapshot(client_with_sample_snapshot):
+    _, families = _parse_metrics(client_with_sample_snapshot)
+    values = {
+        family.name: family.samples[0].value
+        for family in families
+        if family.name != "pool_selector_requests"
+    }
+
+    assert values["pool_selector_pools_tracked"] == len(SAMPLE_STATS)
+    assert values["pool_selector_events_total"] == 573
+    assert values["pool_selector_malformed_events_total"] == 2
+
+
+def test_metrics_counts_two_consecutive_404s_by_diff(client_with_sample_snapshot):
+    _, before_families = _parse_metrics(client_with_sample_snapshot)
+    before = _requests_total_by_status(before_families, "404")
+
+    client_with_sample_snapshot.get("/get-pools?instance_type=t3.nano")
+    client_with_sample_snapshot.get("/get-pools?instance_type=t3.nano")
+
+    _, after_families = _parse_metrics(client_with_sample_snapshot)
+    after = _requests_total_by_status(after_families, "404")
+
+    assert after - before == 2
+
+
+def test_metrics_counts_200_and_503_by_diff(client_with_sample_snapshot):
+    _, before_families = _parse_metrics(client_with_sample_snapshot)
+    before_200 = _requests_total_by_status(before_families, "200")
+    before_503 = _requests_total_by_status(before_families, "503")
+
+    client_with_sample_snapshot.get("/get-pools")
+
+    original_snapshot = snapshot_store.current
+    snapshot_store.publish(EMPTY_SNAPSHOT)
+    client_with_sample_snapshot.get("/get-pools")
+    snapshot_store.publish(original_snapshot)
+
+    _, after_families = _parse_metrics(client_with_sample_snapshot)
+    after_200 = _requests_total_by_status(after_families, "200")
+    after_503 = _requests_total_by_status(after_families, "503")
+
+    assert after_200 - before_200 == 1
+    assert after_503 - before_503 == 1

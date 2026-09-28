@@ -1,10 +1,10 @@
-"""Sobe o dataset sintético local para um bucket S3 (real ou LocalStack).
+"""
+Sobe o dataset sintético local para um bucket S3 (real ou LocalStack).
 
-Usado pelo `docker-compose.yml` (perfil `aws`, serviço `seeder`) para
-popular o bucket antes da API subir apontando `EVENT_SOURCE=s3` para ele.
+Usado pelo docker-compose.yml (perfil aws, serviço seeder) para popular o bucket
+antes da API subir apontando `EVENT_SOURCE=s3` para ele.
 Preserva o mesmo layout particionado por hora do gerador (Etapa 1), então
-o S3EventSource lê exatamente a mesma estrutura que o LocalFileEventSource
-já lê do disco — só muda de onde os bytes vêm.
+o S3EventSource lê exatamente a mesma estrutura que o LocalFileEventSource já lê do disco, só muda de onde os bytes vêm.
 """
 
 from __future__ import annotations
@@ -18,14 +18,15 @@ from app.core.config import settings
 
 
 def ensure_bucket(client, bucket: str, region: str) -> None:
-    """Cria o bucket se ele ainda não existir — idempotente, então rodar o
-    seeder de novo num bucket já populado não falha."""
+    """
+    Cria o bucket se ele ainda não existir — idempotente, 
+    então rodar o seeder de novo num bucket já populado não falha.
+    """
     existing = {b["Name"] for b in client.list_buckets()["Buckets"]}
     if bucket in existing:
         return
     if region == "us-east-1":
-        # a API do S3 trata us-east-1 como caso especial: não aceita
-        # LocationConstraint para a região "padrão"
+        # a API do S3 trata us-east-1 como caso especial: não aceita LocationConstraint para a região "padrão"
         client.create_bucket(Bucket=bucket)
     else:
         client.create_bucket(
@@ -34,8 +35,10 @@ def ensure_bucket(client, bucket: str, region: str) -> None:
 
 
 def upload_dataset(client, bucket: str, prefix: str, source_dir: Path) -> int:
-    """Envia cada arquivo .jsonl mantendo a mesma estrutura de pastas
-    relativa a source_dir, prefixada por `prefix` (ex.: events/)."""
+    """
+    Envia cada arquivo .jsonl mantendo a mesma estrutura de pastas
+    relativa a source_dir, prefixada por `prefix` (ex: events/).
+    """
     uploaded = 0
     for path in sorted(source_dir.rglob("*.jsonl")):
         relative_key = path.relative_to(source_dir).as_posix()

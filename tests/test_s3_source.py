@@ -1,4 +1,5 @@
-"""Testes do adapter S3 usando moto — mocka a API do boto3 inteiramente em
+"""
+Testes do adapter S3 usando moto — mocka a API do boto3 inteiramente em
 memória, sem precisar de rede, daemon do Docker nem credenciais reais.
 
 Isso é o que permite afirmar que o caminho do S3 é código genuinamente

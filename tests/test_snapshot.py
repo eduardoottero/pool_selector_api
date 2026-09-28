@@ -1,4 +1,6 @@
-"""Testes do snapshot imutável e da troca atômica de ponteiro."""
+"""
+Testes do snapshot imutável e da troca atômica de ponteiro.
+"""
 
 from datetime import UTC, datetime, timedelta
 

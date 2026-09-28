@@ -1,4 +1,5 @@
-"""Testes do gerador de dados sintéticos.
+"""
+Testes do gerador de dados sintéticos.
 
 Provam que os 5 cenários plantados (Etapa 1) têm de fato as características
 que o algoritmo de scoring (Etapa 2) precisa para se comportar de forma
@@ -79,8 +80,7 @@ def test_pathological_job_scenario_does_not_count_as_pool_failure():
     assert len(bad_job) > 50
     assert all(e["status"] == "FAILED" for e in bad_job)
     assert all(e["reason"] in ("TIMED_OUT", "SPARK_EXECUTION_ERROR") for e in bad_job)
-    # nenhuma dessas falhas deve ser SPOT_INSTANCE_TERMINATION — senão o
-    # teste da Etapa 2 que prova a exclusão de job_fault ficaria sem sentido
+    # nenhuma dessas falhas deve ser SPOT_INSTANCE_TERMINATION — senão o teste da Etapa 2 que prova a exclusão de job_fault ficaria sem sentido
     assert not any(e["reason"] == "SPOT_INSTANCE_TERMINATION" for e in bad_job)
 
 

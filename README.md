@@ -1,8 +1,7 @@
 # Pool Selector API
 
-API REST que seleciona o pool de instâncias EC2 spot com maior
-probabilidade de um job Spark executar sem perder capacidade, a partir do
-histórico de eventos de finalização de jobs.
+API REST que seleciona o pool de instâncias EC2 spot com maior probabilidade de um job Spark executar sem perder capacidade, 
+a partir do histórico de eventos de finalização de jobs.
 
 ## Quickstart
 
@@ -10,9 +9,7 @@ histórico de eventos de finalização de jobs.
 make dev
 ```
 
-Um único comando: instala as dependências num ambiente virtual isolado
-(Poetry), gera um dataset sintético de eventos (determinístico) e sobe a
-API em `http://localhost:5050`. Não depende de Docker.
+Um único comando: instala as dependências num ambiente virtual isolado (Poetry), gera um dataset sintético de eventos (determinístico) e sobe a API em `http://localhost:5050`. Não depende de Docker.
 
 ```bash
 curl http://localhost:5050/get-pools
@@ -24,24 +21,14 @@ Documentação interativa (Swagger): `http://localhost:5050/docs`.
 
 ## O problema e a resposta em uma frase
 
-O endpoint não retorna "o pool com melhor taxa de sucesso histórica" — ele
-separa falha por indisponibilidade de spot (`SPOT_INSTANCE_TERMINATION`)
-de falha do próprio job (`TIMED_OUT`, `SPARK_EXECUTION_ERROR`), corrige o
-viés de amostra pequena, pondera eventos recentes mais que antigos, e
-sorteia entre os melhores candidatos em vez de recomendar sempre o mesmo
-pool — evitando que a própria recomendação sobrecarregue a AZ que a
-tornou boa. Detalhes e o racional completo em
+O endpoint não retorna "o pool com melhor taxa de sucesso histórica" — ele separa falha por indisponibilidade de spot (`SPOT_INSTANCE_TERMINATION`) de falha do próprio job (`TIMED_OUT`, `SPARK_EXECUTION_ERROR`), corrige o viés de amostra pequena, pondera eventos recentes mais que antigos, e sorteia entre os melhores candidatos ao invés de recomendar sempre o mesmo pool — evitando que a própria recomendação sobrecarregue a AZ que a tornou boa. Detalhes e o racional completo em 
 [`docs/algorithm.md`](./docs/algorithm.md).
 
-**A prova em números reais do dataset sintético**: um pool com apenas 2
-execuções, ambas bem-sucedidas (100% de taxa ingênua), fica em **último**
-lugar do ranking; um pool com 170+ execuções e 97% de sucesso fica em
-**primeiro**. Sem a correção de amostra pequena, essa ordem seria invertida.
+**A prova em números reais do dataset sintético**: um pool com apenas 2 execuções, ambas bem-sucedidas (100% de taxa ingênua), fica em **último** lugar do ranking; um pool com 170+ execuções e 97% de sucesso fica em **primeiro**. Sem a correção de amostra pequena, essa ordem seria invertida.
 
 ## Requisitos
 
-- Python 3.12+ (o Makefile fixa a versão automaticamente via Poetry — não
-  é necessário ter o 3.12 "ativo" no shell)
+- Python 3.12+ (o Makefile fixa a versão automaticamente via Poetry — não é necessário ter o 3.12 "ativo" no shell)
 - [Poetry](https://python-poetry.org/) instalado
 - Docker, apenas para `make dev-aws` (opcional — ver abaixo)
 
@@ -69,23 +56,22 @@ lugar do ranking; um pool com 170+ execuções e 97% de sucesso fica em
 
 ## Decisões principais (racional completo nos ADRs)
 
-- **FastAPI**: ASGI casa com o perfil de tráfego em rajada; validação e
-  documentação automática de parâmetros. [ADR 0001](./docs/adr/0001-framework.md)
-- **Sem banco de dados**: o estado é derivado do S3, reconstruível em
-  segundos; poucos KB de dados por pool cabem em memória.
-  [ADR 0002](./docs/adr/0002-sem-banco-de-dados.md)
-- **Algoritmo de scoring aritmético**, não estatístico: o sorteio final
-  absorve resolução decimal extra, e um cálculo auditável de cabeça
-  responde "por que esse pool?" durante um incidente.
-  [ADR 0003](./docs/adr/0003-algoritmo-scoring.md)
-- **ECS Fargate, não Lambda**: o snapshot em memória precisa de um
-  processo de vida longa com loop de background — Lambda reconstruiria
-  tudo a cada cold start. [ADR 0004](./docs/adr/0004-topologia-aws.md)
-- **`make dev` sem Docker**: o comando único não deve depender de um
-  daemon que pode estar parado na máquina de quem avalia.
+- **FastAPI**: ASGI casa com o perfil de tráfego em rajada; 
+  validação e documentação automática de parâmetros. [ADR 0001](./docs/adr/0001-framework.md)
+
+- **Sem banco de dados**: o estado é derivado do S3, reconstruível em segundos; 
+  poucos KB de dados por pool cabem em memória. [ADR 0002](./docs/adr/0002-sem-banco-de-dados.md)
+
+- **Algoritmo de scoring aritmético**, não estatístico: o sorteio final absorve resolução decimal extra, e um cálculo auditável 
+  de cabeça responde "por que esse pool?" durante um incidente. [ADR 0003](./docs/adr/0003-algoritmo-scoring.md)
+
+- **ECS Fargate, não Lambda**: o snapshot em memória precisa de um processo de vida longa com loop de background — 
+  Lambda   reconstruiria tudo a cada cold start. [ADR 0004](./docs/adr/0004-topologia-aws.md)
+
+- **`make dev` sem Docker**: o comando único não deve depender de um daemon que pode estar parado na máquina de quem avalia.
   [ADR 0005](./docs/adr/0005-demonstracao-local-sem-conta-aws.md)
-- **Terraform desacoplado do deploy**: o workflow de deploy só conhece
-  nomes de recursos via variáveis do GitHub, nunca lê um `.tf`.
+
+- **Terraform desacoplado do deploy**: o workflow de deploy só conhece nomes de recursos via variáveis do GitHub, nunca lê um `.tf`.
   [ADR 0007](./docs/adr/0007-terraform-desacoplado-do-deploy.md)
 
 ## CI/CD
@@ -97,11 +83,7 @@ feature/* ──PR──► dev ──► deploy-dev (aprovação manual) ──
                                             main ──► deploy-prod (aprovação manual)
 ```
 
-`ci.yml` roda de verdade em todo push/PR — lint, type-check, testes com
-cobertura, build da imagem Docker e validação do Terraform. Os workflows
-de deploy são um dry-run honesto (imprimem os comandos reais em vez de
-executá-los), guardados por uma variável do repositório — não há conta
-AWS provisionada para este desafio.
+`ci.yml` roda de verdade em todo push/PR — lint, type-check, testes com cobertura, build da imagem Docker e validação do Terraform. Os workflows de deploy são um dry-run honesto (imprimem os comandos reais ao invés de executá-los), guardados por uma variável do repositório — não há conta AWS provisionada para este desafio.
 
 ## Testes
 
@@ -109,10 +91,7 @@ AWS provisionada para este desafio.
 make test
 ```
 
-72 testes, cobrindo o algoritmo de scoring (com os cenários que provam a
-correção de amostra pequena e a exclusão de falhas de job), o adapter S3
-(via `moto`, sem depender de rede), o loop de ingestão (incluindo
-resiliência a falha de fonte e linha malformada), e as rotas da API.
+72 testes, cobrindo o algoritmo de scoring (com os cenários que provam a correção de amostra pequena e a exclusão de falhas de job), o adapter S3 (via `moto`, sem depender de rede), o loop de ingestão (incluindo resiliência a falha de fonte e linha malformada), e as rotas da API.
 
 ## Estrutura do projeto
 

@@ -1,17 +1,15 @@
-"""Gerador de dados sintéticos de eventos de finalização de job Spark.
+"""
+Gerador de dados sintéticos de eventos de finalização de job Spark.
 
-Não existem dados reais para este desafio — este gerador *é* a demonstração.
-Ele planta 5 cenários deliberados que fazem o algoritmo de scoring (Etapa 2)
-produzir um resultado visivelmente não-trivial, além de "ruído de fundo"
-realista (chegada de jobs variando ao longo do dia, várias famílias de
-instância e AZs).
+Não existem dados reais para este desafio — este gerador é a demonstração.
+Ele planta 5 cenários que fazem o algoritmo de scoring (Etapa 2) produzir 
+um resultado visivelmente não-trivial, além de "ruído de fundo" realista 
+(chegada de jobs variando ao longo do dia, várias famílias de instância e AZs).
 
-Determinístico via --seed: a mesma semente sempre gera o mesmo dataset,
-o que torna a demonstração e os testes reprodutíveis.
+Determinístico via --seed: a mesma seed sempre gera o mesmo dataset, o que torna a demonstração e os testes reprodutíveis.
 
-Saída: um arquivo JSONL por hora, em <out>/<data>/<hora>.jsonl — imita o
-layout realista de um bucket S3 particionado por tempo, e serve para a
-Etapa 3 exercitar leitura incremental de múltiplos objetos.
+Saída: um arquivo JSONL por hora, em <out>/<data>/<hora>.jsonl — imita o ayout realista de um bucket S3 particionado por tempo, 
+e serve para a Etapa 3 exercitar leitura incremental de múltiplos objetos.
 """
 
 from __future__ import annotations
@@ -64,9 +62,10 @@ def _event(
 
 
 def _diurnal_weight(hour: int) -> float:
-    """Fator de intensidade de jobs por hora do dia — picos às 9h e 13h,
-    madrugada quieta. Modela o requisito de que o volume de jobs varia
-    bastante ao longo do dia."""
+    """
+    Fator de intensidade de jobs por hora do dia — picos às 9h e 13h, madrugada quieta. 
+    Modela o requisito de que o volume de jobs varia bastante ao longo do dia.
+    """
     morning_peak = max(0.0, 1 - abs(hour - 9) / 4)
     afternoon_peak = max(0.0, 1 - abs(hour - 13) / 4)
     base = 0.15
@@ -77,10 +76,12 @@ def _diurnal_weight(hour: int) -> float:
 
 
 def generate_degrading_az_scenario(start: datetime, hours: int, rng: random.Random) -> list[dict]:
-    """us-east-1c começa o período com ~98% de sucesso e cai para ~60% nas
+    """
+    us-east-1c começa o período com ~98% de sucesso e cai para ~60% nas
     últimas 6 horas — simula uma AZ perdendo disponibilidade de spot ao
     longo do dia. Prova que o decaimento por idade do evento (Etapa 2) faz
-    a API reagir à mudança recente, não à média histórica."""
+    a API reagir à mudança recente, não à média histórica.
+    """
     events = []
     instance_type = "r6.xlarge"
     az = "us-east-1c"
@@ -113,9 +114,11 @@ def generate_degrading_az_scenario(start: datetime, hours: int, rng: random.Rand
 
 
 def generate_workhorse_scenario(start: datetime, hours: int, rng: random.Random) -> list[dict]:
-    """pool-r6.xlarge-us-east-1a: ~500 eventos, 97% de sucesso, distribuído
+    """
+    pool-r6.xlarge-us-east-1a: ~500 eventos, 97% de sucesso, distribuído
     de forma constante pelo dia. Deve vencer o 'novato sortudo' do cenário 3
-    apesar de não ter 100% de sucesso — é a comparação central do README."""
+    apesar de não ter 100% de sucesso — é a comparação central do README.
+    """
     events = []
     pool_id = _pool_id("r6.xlarge", "us-east-1a")
 
@@ -138,10 +141,12 @@ def generate_workhorse_scenario(start: datetime, hours: int, rng: random.Random)
 
 
 def generate_lucky_newcomer_scenario(start: datetime, hours: int, rng: random.Random) -> list[dict]:
-    """pool-r6.2xlarge-us-east-1d: só 2 eventos, ambos SUCCESS — taxa ingênua
+    """
+    pool-r6.2xlarge-us-east-1d: só 2 eventos, ambos SUCCESS — taxa ingênua
     de 100%. Sem correção para amostra pequena, este pool venceria o
     workhorse (97% com 500 amostras). É o teste que prova que o sistema de
-    pontos com cortesia funciona."""
+    pontos com cortesia funciona.
+    """
     pool_id = _pool_id("r6.2xlarge", "us-east-1d")
     # os dois eventos acontecem nas últimas 2 horas, para pesarem o máximo possível
     moments = [
@@ -157,11 +162,10 @@ def generate_lucky_newcomer_scenario(start: datetime, hours: int, rng: random.Ra
 def generate_pathological_job_scenario(
     start: datetime, hours: int, rng: random.Random
 ) -> list[dict]:
-    """Um job mal escrito ('bad-etl-job') falha ~80 vezes por TIMED_OUT e
-    SPARK_EXECUTION_ERROR, concentrado no pool c6.xlarge-us-east-1b — que é,
-    de resto, um pool saudável (também recebe execuções normais de outros
-    jobs). Prova que excluir essas razões do denominador impede que um job
-    ruim derrube o score de um pool bom."""
+    """
+    Um job mal escrito ('bad-etl-job') falha ~80 vezes por TIMED_OUT e SPARK_EXECUTION_ERROR, 
+    concentrado no c6.xlarge-us-east-1b que é um pool saudável (também recebe execuções normais de outros jobs). 
+    Prova que excluir essas razões do denominador impede que um job ruim derrube o score de um pool bom."""
     events = []
     pool_id = _pool_id("c6.xlarge", "us-east-1b")
 
@@ -200,9 +204,9 @@ COLD_START_POOL = _pool_id("i3.xlarge", "us-east-1a")
 
 
 def generate_background_noise(start: datetime, hours: int, rng: random.Random) -> list[dict]:
-    """Preenche os demais pools (famílias x AZs não cobertas pelos cenários
-    acima) com atividade moderada e taxas de sucesso plausíveis, para o
-    dataset não parecer artificialmente vazio fora dos 5 cenários."""
+    """Preenche os demais pools (famílias x AZs não cobertas pelos cenários acima) 
+    com atividade moderada e taxas de sucesso plausíveis, para o dataset não parecer artificialmente vazio fora dos 5 cenários.
+    """
     events = []
     already_used_pools = {
         _pool_id("r6.xlarge", "us-east-1c"),
@@ -263,9 +267,11 @@ def generate_dataset(hours: int, seed: int, now: datetime | None = None) -> list
 
 
 def write_partitioned(events: list[dict], out_dir: Path) -> None:
-    """Escreve os eventos em <out_dir>/<AAAA-MM-DD>/<HH>.jsonl — um objeto
-    por hora, imitando o particionamento típico de um bucket S3 alimentado
-    por um processo contínuo."""
+    """
+    Escreve os eventos em <out_dir>/<AAAA-MM-DD>/<HH>.jsonl (um objeto por hora) 
+    imitando o particionamento típico de um bucket S3 alimentado
+    por um processo contínuo.
+    """
     by_partition: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for event in events:
         ts = datetime.fromisoformat(event["finished_at"])
@@ -286,13 +292,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=Path("data/events"), help="pasta de saída")
     parser.add_argument("--hours", type=int, default=48, help="janela de tempo simulada, em horas")
-    parser.add_argument("--seed", type=int, default=42, help="semente para reprodutibilidade")
+    parser.add_argument("--seed", type=int, default=42, help="seed para reprodutibilidade")
     parser.add_argument(
         "--now",
         type=datetime.fromisoformat,
         default=None,
-        help="instante final da janela simulada, ISO 8601 (padrão: agora)."
-        " Fixar este valor torna a saída totalmente determinística — mesmo os"
+        help="instante final da janela simulada (padrão: agora). Se passado, deve ser ISO 8601."
+        " Fixar este valor torna a saída totalmente determinística. mesmo os"
         " nomes dos arquivos de partição, que dependem do instante final.",
     )
     args = parser.parse_args()
@@ -302,7 +308,7 @@ def main() -> None:
     write_partitioned(events, args.out)
 
     print(
-        f"Gerados {len(events)} eventos em {args.out}/ (semente={args.seed}, janela={args.hours}h)"
+        f"Gerados {len(events)} eventos em {args.out}/ (seed={args.seed}, janela={args.hours}h)"
     )
 
 

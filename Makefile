@@ -3,12 +3,7 @@
 # Por que existe: o requisito do desafio é "um único comando" sobe tudo,
 # isolado, sem exigir Docker (que depende de um daemon que pode estar
 # parado na máquina do avaliador). `make dev` resolve isso com Poetry.
-#
-# Armadilha de ambiente que este Makefile evita: nesta máquina o comando
-# `python3` "puro" resolve para um shim do pyenv apontando para 3.9.18,
-# que viola o requisito do desafio (Python > 3.9 "de verdade", e nossas
-# dependências pedem >=3.12). Por isso fixamos o interpretador explicitamente
-# via `poetry env use`, em vez de deixar o Poetry adivinhar.
+
 
 PYTHON := /opt/homebrew/bin/python3.12
 PORT := 5050
