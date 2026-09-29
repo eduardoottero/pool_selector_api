@@ -5,7 +5,10 @@
 # parado na máquina do avaliador). `make dev` resolve isso com Poetry.
 
 
-PYTHON := /opt/homebrew/bin/python3.12
+# PYTHON resolve `python3.12` pelo PATH (portável entre máquinas); o
+# caminho fixo do Homebrew só entra como último recurso se o PATH não
+# tiver um `python3.12` (ex.: instalado mas não exportado nesta sessão).
+PYTHON := $(shell command -v python3.12 || echo /opt/homebrew/bin/python3.12)
 PORT := 5050
 
 .PHONY: dev install seed reseed serve test lint verify clean dev-aws docker-down
@@ -13,7 +16,7 @@ PORT := 5050
 dev: install seed serve
 
 install:
-	@echo "→ fixando o interpretador do Poetry em $(PYTHON) (evita o pyenv 3.9.18)"
+	@echo "→ fixando o interpretador do Poetry em $(PYTHON)"
 	poetry env use $(PYTHON)
 	poetry install
 
